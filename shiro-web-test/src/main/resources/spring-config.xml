@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <context:component-scan base-package="com.shiro.test.mvc">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
+
+
+    <!--spring和mybatis整合-->
+    <!--加载JDBC配置文件-->
+    <context:property-placeholder location="classpath:jdbc.properties" ignore-unresolvable="true" />
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="${driverClass}"/>
+        <property name="url" value="${jdbcUrl}"/>
+        <property name="username" value="${user}"/>
+        <property name="password" value="${password}"/>
+    </bean>
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <!--自动生成实体类别名-->
+        <property name="typeAliasesPackage" value="com.shiro.test.mvc.pojo"/>
+        <!--mapper映射文件地址-->
+        <property name="mapperLocations" value="classpath*:com/shiro/test/mvc/dao/*.xml"/>
+    </bean>
+    <!--事务配置 aop:advice和aop:config-->
+    <bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+    <tx:advice id="txAdvice" transaction-manager="txManager">
+        <tx:attributes>
+            <tx:method name="add*"
+                       isolation="REPEATABLE_READ" rollback-for="Exception"/>
+            <tx:method name="update*"
+                       isolation="REPEATABLE_READ" rollback-for="Exception"/>
+            <tx:method name="delete*"
+                       isolation="REPEATABLE_READ" rollback-for="Exception"/>
+            <tx:method name="get*"
+                       isolation="REPEATABLE_READ" read-only="true"/>
+            <tx:method name="*"
+                       isolation="REPEATABLE_READ" propagation="NOT_SUPPORTED"/>
+        </tx:attributes>
+    </tx:advice>
+    <!--切入点配置-->
+    <aop:config>
+        <aop:pointcut id="point" expression="execution(* com.shiro.test.mvc.service..*(..))"/>
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="point"/>
+    </aop:config>
+    <!--mybatis扫描接口动态生成实现类-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.shiro.test.mvc.dao"/>
+    </bean>
+    <!--spring和mybatis整合-->
+
+    <!--shiro重要点：1、缓存 2、cookie-->
+    <bean id="cacheManager" class="org.apache.shiro.cache.MemoryConstrainedCacheManager"/>
+    <bean id="rememberMeCookie" class="org.apache.shiro.web.servlet.SimpleCookie">
+        <constructor-arg value="rememberMyShiro"/> <!--cookie's Name-->
+        <property name="httpOnly" value="true"/> <!--只在http请求有效,js中就获取不到-->
+        <property name="maxAge" value="2592000"/><!--有效期秒为单位=30天 -1等于立马失效-->
+    </bean>
+    <bean id="rememberMeManager" class="org.apache.shiro.web.mgt.CookieRememberMeManager">
+        <property name="cookie" ref="rememberMeCookie"/>
+        <property name="cipherKey" value="#{T(org.apache.shiro.codec.Base64).decode('4AvVhmFLUs0KTA3Kprsdag==')}"/> <!--16 24 32的base64-->
+    </bean>
+    <!--   <bean id="iniReaml" class="org.apache.shiro.realm.text.IniRealm">
+       <constructor-arg name="resourcePath" value="classpath:shiro-web.ini" />
+   </bean>-->
+    <bean id="myShiroRealm" class="com.shiro.test.mvc.shiroFilter.MyShiroRealm"/>
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <property name="realm" ref="myShiroRealm"/>
+        <property name="cacheManager" ref="cacheManager"/>
+        <property name="rememberMeManager" ref="rememberMeManager"/>
+    </bean>
+
+
+    <bean id="shiroFilter" class="com.shiro.test.mvc.shiroFilter.MyShiroFilterFactoryBean">
+        <property name="securityManager" ref="securityManager"/>
+        <property name="loginUrl" value="/gologin.html"/>
+        <property name="successUrl" value="/index.html"/>
+        <property name="unauthorizedUrl" value="/error.html"/>
+        <property name="filterChainDefinitions">
+            <value>
+                /login.html=anon
+                /index.html=authc
+                /site.html=authc
+                <!--/role.html=roles[1]--> <!--默认包含所有角色才通过-->
+                /menu/**=authc,roles[admin,test],perms[menu:list]
+            </value>
+        </property>
+        <property name="filters">
+            <map>
+                <entry key="roles">
+                    <bean class="com.shiro.test.mvc.shiroFilter.MyRolesFilter"/>
+                </entry>
+                <entry key="perms">
+                    <bean class="com.shiro.test.mvc.shiroFilter.MyPermsFilter"/>
+                </entry>
+            </map>
+        </property>
+    </bean>
+
+    <!--shiro权限控制注解-->
+    <bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+        <property name="securityManager" ref="securityManager"/>
+    </bean>
+
+</beans>

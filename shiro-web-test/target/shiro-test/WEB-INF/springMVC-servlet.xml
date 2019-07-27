@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.3.xsd
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd">
+
+
+    <context:component-scan base-package="com.shiro.test.mvc.controller">
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
+
+    <!--viewResolver-->
+    <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <property name="prefix" value="/WEB-INF/pages/"/>
+        <property name="suffix" value=".jsp"/>
+    </bean>
+
+    <!--shiro权限控制注解-->
+    <bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor">
+    </bean>
+    <bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator" depends-on="lifecycleBeanPostProcessor">
+    </bean>
+
+    <!--使用@ResponseBody注解，配置返回值转换器-->
+    <mvc:annotation-driven content-negotiation-manager="contentNegotiationManagerFactoryBean"/>
+    <bean id="contentNegotiationManagerFactoryBean" class="org.springframework.web.accept.ContentNegotiationManagerFactoryBean">
+        <!--是否支持后缀匹配-->
+        <property name="favorPathExtension" value="false"/>
+        <!--是否支持参数匹配-->
+        <property name="favorParameter" value="false"/>
+        <!-- 在没有扩展名时即: "http://www.sxrczx.com/rest" 时的默认展现形式 -->
+        <property name="ignoreAcceptHeader" value="false"/>
+        <property name="mediaTypes" >
+            <map>
+                <entry key="json" value="application/json" />
+            </map>
+        </property>
+    </bean>
+
+</beans>
