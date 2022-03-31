@@ -21,7 +21,7 @@
         <webVersion>3.1</webVersion>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!--spring版本号,5.0.0RELEASE是2017年9月发布的新版本 -->
-        <spring.version>5.1.6.RELEASE</spring.version>
+        <spring.version>5.3.18</spring.version>
 
 
     </properties>
